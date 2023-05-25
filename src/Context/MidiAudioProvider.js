@@ -2,9 +2,9 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import{ Midi, Chord } from "tonal"
 
 export const MidiAudioCtx = createContext(null)
-
+const oscillators ={}
 export const MidiAudioProvider = function(props) {
-    const[note, setNote] = useState([])
+    const[notes, setNotes] = useState([])
     const[command, setCommand] = useState([])
     const[velocity, setVelocity] = useState([])
     const[midiNote, setMidiNote] = useState([])
@@ -12,7 +12,7 @@ export const MidiAudioProvider = function(props) {
     window.AudioContext = window.AudioContext || window.webkitAudioContext
 
     const ctx = new AudioContext()
-    const oscillators ={}
+    
 
     function midiToFreq(number) {
         const a = 440
@@ -40,28 +40,31 @@ export const MidiAudioProvider = function(props) {
     }
 
     function handleInput(input) {
+        //console.log(input.data)
         const command = input.data[0]
         const note = input.data[1]
         const velocity = input.data[2]
-        const midiNote = Midi.midiToNoteName(note)
-        console.log(midiNote)
+        const midiNote = Midi.midiToNoteName(note, {sharps:true})
+        const midiChord = []
+        midiChord.push(midiNote)
+
         //const chord = Chord.detect([midiNote.toString()])
         //console.log(chord)
-
         
-        switch(command) {
-            case 144: //note on
-            if(velocity > 0) {
-              noteOn(note, velocity)
-              
+        setNotes((prevNotes) =>{
+            const newNotes = prevNotes.filter(x => x !== midiNote)
+            if(command === 144 && velocity > 0) {
+                noteOn(note, velocity)
+                return [...newNotes, midiNote]
             } else {
-              noteOff(note)
+                noteOff(note)
+                return newNotes
             }
-            break
-            case 128: //note off
-            noteOff(note)
-            break 
-        }
+           
+
+        })
+        
+       
     }
 
     function noteOn(note, velocity) {
@@ -99,6 +102,9 @@ export const MidiAudioProvider = function(props) {
 
     function noteOff(note) {
         const osc = oscillators[note.toString()]
+        if(!osc){
+            return 
+        }
         const oscGain = osc.gain
 
         oscGain.gain.setValueAtTime(oscGain.gain.value, ctx.currentTime)
@@ -124,7 +130,7 @@ export const MidiAudioProvider = function(props) {
     }
 
     const value = {
-        note,
+        notes,
         command,
         velocity,
         midiNote

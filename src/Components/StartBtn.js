@@ -1,4 +1,4 @@
-export default function StartBtn() {
+export default function Startbtn() {
 
 
 
